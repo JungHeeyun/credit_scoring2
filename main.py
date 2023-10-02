@@ -7,7 +7,7 @@ import os
 import pandas as pd
 
 def load_and_preprocess_data():
-    df = pd.read_csv(r'C:\Users\gon\Desktop\GPT\credit\RF\csvdata.csv')
+    df = pd.read_csv("csvdata.csv")
     df = df.drop(["first_funding_at", "last_funding_at"], axis=1)
     df = df.drop(columns=df.columns[0])
 
@@ -29,7 +29,7 @@ def load_rf_model(X_df, y_df):
     X_train_df, _, y_train_df, _ = train_test_split(X_temp_df, y_temp_df, test_size=1/9, random_state=40, stratify=y_temp_df)
 
     X_train_scaled_df = pd.DataFrame(scaler.fit_transform(X_train_df.values), columns=X_df.columns)
-    model_path = r"C:\Users\gon\Desktop\GPT\credit\RF\random_forest_model.joblib"
+    model_path = "random_forest_model.joblib"
 
     if os.path.exists(model_path):
         rf = load(model_path)
