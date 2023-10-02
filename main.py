@@ -84,18 +84,19 @@ def preprocess_user_input(user_input, df, X_df, scaler):
     user_input_dummies = pd.concat([user_input[['homepage_url', "funding_total_usd", 'funding_rounds', 'founded_quarter']],
                                     industry_dummies, country_dummies, region_dummies], axis=1)
 
-    # Ensure that all columns from the original data are present in the user input
-    # For missing columns, fill with zeros
-    for column in X_df.columns:
-        if column not in user_input_dummies.columns:
-            user_input_dummies[column] = 0
+    # Add missing columns with zeros in one step
+    missing_cols = set(X_df.columns) - set(user_input_dummies.columns)
+    for col in missing_cols:
+        user_input_dummies[col] = 0
 
     # Order columns to match the original structure
     user_input_dummies = user_input_dummies[X_df.columns]
-    user_input_dummies_scaled = scaler.transform(user_input_dummies)
+
+    # Using .values to provide NumPy array for transformation
+    user_input_dummies_scaled = scaler.transform(user_input_dummies.values)
 
     return user_input_dummies_scaled
-
+    
 # 라벨링 점수 계산을 위한 함수 정의
 def calculate_score(row, class_probabilities):
     scores = {
