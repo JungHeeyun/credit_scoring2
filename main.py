@@ -84,16 +84,13 @@ def preprocess_user_input(user_input, df, X_df, scaler):
     user_input_dummies = pd.concat([user_input[['homepage_url', "funding_total_usd", 'funding_rounds', 'founded_quarter']],
                                     industry_dummies, country_dummies, region_dummies], axis=1)
 
-    # Add missing columns with zeros in one step
-    missing_cols = set(X_df.columns) - set(user_input_dummies.columns)
-    for col in missing_cols:
-        user_input_dummies[col] = 0
+    # Ensure that all columns from the original data are present in the user input
+    all_columns_df = pd.DataFrame(columns=X_df.columns)
+    all_columns_df.loc[0] = 0
 
-    # Order columns to match the original structure
-    user_input_dummies = user_input_dummies[X_df.columns]
-
-    # Using .values to provide NumPy array for transformation
-    user_input_dummies_scaled = scaler.transform(user_input_dummies.values)
+    user_input_dummies = pd.concat([all_columns_df, user_input_dummies], axis=0, ignore_index=True).fillna(0)
+    user_input_dummies = user_input_dummies[X_df.columns].iloc[1:]
+    user_input_dummies_scaled = scaler.transform(user_input_dummies)
 
     return user_input_dummies_scaled
     
@@ -132,25 +129,23 @@ def main():
     st.write("Startup Details:")
     st.table(user_input)
     
-    # 버튼 추가
-    if st.button("Calculate Credit Score"):
-        # Class probabilities를 얻는다.
-        class_probabilities = rf.predict_proba(processed_data)
-        predicted_class = rf.predict(processed_data)[0]
+    # Class probabilities를 얻는다.
+    class_probabilities = rf.predict_proba(processed_data)
+    predicted_class = rf.predict(processed_data)[0]
 
-        # 점수 계산을 위해 DataFrame에 사용자 입력과 클래스 확률을 추가한다.
-        df_input = pd.DataFrame(processed_data, columns=X_df.columns)
-        df_input["label"] = predicted_class
-        df_input["class_probabilities"] = list(class_probabilities)
-        
-        # 점수 계산
-        df_input["score"] = df_input.apply(lambda row: calculate_score(row, row["class_probabilities"]), axis=1)
+    # 점수 계산을 위해 DataFrame에 사용자 입력과 클래스 확률을 추가한다.
+    df_input = pd.DataFrame(processed_data, columns=X_df.columns)
+    df_input["label"] = predicted_class
+    df_input["class_probabilities"] = list(class_probabilities)
+    
+    # 점수 계산
+    df_input["score"] = df_input.apply(lambda row: calculate_score(row, row["class_probabilities"]), axis=1)
 
-        st.subheader("Startup's Predicted Credit Score:")
-        st.markdown(f"**Predicted Credit Score: {round(df_input['score'].values[0], 2)}**")
-        
-        st.write("Scoring Breakdown:")
-        st.write(df_input[["label", "score", "class_probabilities"]])
+    st.subheader("Startup's Predicted Credit Score:")
+    st.markdown(f"**Predicted Credit Score: {round(df_input['score'].values[0], 2)}**")
+    
+    st.write("Scoring Breakdown:")
+    st.write(df_input[["label", "score", "class_probabilities"]])
 
 if __name__ == "__main__":
     main()
