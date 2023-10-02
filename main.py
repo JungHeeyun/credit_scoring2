@@ -5,6 +5,9 @@ from sklearn.preprocessing import StandardScaler
 from joblib import dump, load
 import os
 import pandas as pd
+import warnings
+from sklearn.exceptions import DataConversionWarning
+warnings.filterwarnings(action='ignore', category=UserWarning, module='sklearn')
 
 def load_and_preprocess_data():
     df = pd.read_csv("csvdata.csv")
