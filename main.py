@@ -29,7 +29,8 @@ def load_rf_model(X_df, y_df):
     X_temp_df, _, y_temp_df, _ = train_test_split(X_df, y_df, test_size=0.1, random_state=40, stratify=y_df)
     X_train_df, _, y_train_df, _ = train_test_split(X_temp_df, y_temp_df, test_size=1/9, random_state=40, stratify=y_temp_df)
 
-    X_train_scaled_df = pd.DataFrame(scaler.fit_transform(X_train_df.values), columns=X_df.columns)
+    # X_train_df.values 대신 X_train_df를 직접 사용
+    X_train_scaled_df = pd.DataFrame(scaler.fit_transform(X_train_df), columns=X_df.columns)
     model_path = "random_forest_model.joblib"
 
     if os.path.exists(model_path):
@@ -77,24 +78,21 @@ def get_user_input(df):
 
 def preprocess_user_input(user_input, df, X_df, scaler):
     # Dummy variable creation for user input
-    industry_dummies = pd.get_dummies(user_input["industry"], prefix='industry')
-    country_dummies = pd.get_dummies(user_input["country_code"], prefix='country_code')
-    region_dummies = pd.get_dummies(user_input["region"], prefix='region')
+    industry_dummies = pd.get_dummies(user_input["industry"]).reindex(columns=df["industry"].unique(), fill_value=0)
+    country_dummies = pd.get_dummies(user_input["country_code"]).reindex(columns=df["country_code"].unique(), fill_value=0)
+    region_dummies = pd.get_dummies(user_input["region"]).reindex(columns=df["region"].unique(), fill_value=0)
 
     # Concatenate the user input numerical data with the dummies
     user_input_dummies = pd.concat([user_input[['homepage_url', "funding_total_usd", 'funding_rounds', 'founded_quarter']],
                                     industry_dummies, country_dummies, region_dummies], axis=1)
 
-    # Ensure that all columns from the original data are present in the user input
-    all_columns_df = pd.DataFrame(columns=X_df.columns)
-    all_columns_df.loc[0] = 0
-
-    user_input_dummies = pd.concat([all_columns_df, user_input_dummies], axis=0, ignore_index=True).fillna(0)
-    user_input_dummies = user_input_dummies[X_df.columns].iloc[1:]
-    user_input_dummies_scaled = scaler.transform(user_input_dummies)
-
+# Ensure that the user input has the same columns as X_df
+    user_input_dummies = user_input_dummies.reindex(columns=X_df.columns, fill_value=0)
+    user_input_dummies_scaled = pd.DataFrame(scaler.transform(user_input_dummies), columns=X_df.columns)
     return user_input_dummies_scaled
-    
+
+
+
 # 라벨링 점수 계산을 위한 함수 정의
 def calculate_score(row, class_probabilities):
     scores = {
@@ -124,13 +122,13 @@ def main():
     rf, scaler = load_rf_model(X_df, y_df)
     user_input = get_user_input(df)
 
-    processed_data = preprocess_user_input(user_input,df, X_df, scaler)
-    
+    processed_data = preprocess_user_input(user_input, df, X_df, scaler)
+
     # 사용자가 입력한 스타트업 정보도 앱에 표시한다.
     st.write("Startup Details:")
     st.table(user_input)
     
-    # Class probabilities를 얻는다.
+   # .values를 사용하여 DataFrame을 NumPy 배열로 변환
     class_probabilities = rf.predict_proba(processed_data)
     predicted_class = rf.predict(processed_data)[0]
 
